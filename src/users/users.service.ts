@@ -1,39 +1,47 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { CreateUserDto } from '../users/create-user.dto';
+import { UserDetails } from './user-details.interface';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { User, UserDocument } from './users.schema';
 import { Model } from 'mongoose';
-import { HashService } from './hash.service';
-import { User, UserDocument } from './user.schema';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private hashService: HashService,
+    @InjectModel(User.name)
+    private readonly UserModel: Model<UserDocument>,
   ) {}
-
-  async getUserByUsername(username: string) {
-    return this.userModel
-      .findOne({
-        username,
-      })
-      .exec();
+  _getUserDetails(user: UserDocument): UserDetails {
+    return {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+    };
   }
 
-  async registerUser(createUserDto: CreateUserDto) {
-    // validate DTO
+  async findbyEmail(email: string): Promise<UserDocument | null> {
+    return this.UserModel.findOne({ email }).exec();
+  }
 
-    const createUser = new this.userModel(createUserDto);
-    // check if user exists
-    const user = await this.getUserByUsername(createUser.username);
-    if (user) {
-      throw new BadRequestException();
+  async findbyId(id: string): Promise<UserDetails | null> {
+    const user = await this.UserModel.findById({ id }).exec();
+
+    if (!user) {
+      return null;
     }
-    // Hash Password
-    createUser.password = await this.hashService.hashPassword(
-      createUser.password,
-    );
+    return this._getUserDetails(user);
+  }
 
-    return createUser.save();
+  async createUser(
+    name: string,
+    email: string,
+    hashedPassword: string,
+  ): Promise<UserDocument> {
+    const newUser = new this.UserModel({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    return newUser.save();
   }
 }
