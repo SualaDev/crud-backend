@@ -1,31 +1,38 @@
-import { UserService } from 'src/users/users.service';
-import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { HashService } from 'src/users/hash.service';
+import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { UserService } from 'src/users/users.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { User, UserDocument } from 'src/users/users.schema';
+import { Model } from 'mongoose';
+import { NewUserDTO } from 'src/users/dto/new-user.dto';
+import { UserDetails } from 'src/users/user-details.interface';
 
 @Injectable()
 export class AuthService {
   constructor(
     private userService: UserService,
-    private hashService: HashService,
     private jwtService: JwtService,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.userService.getUserByUsername(email);
-    if (user && (await this.hashService.comparePassword(pass, user.password))) {
-      return user;
-    }
-    return null;
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
   }
 
-  async login(user: any) {
-    const payload = {
-      username: user.email,
-      sub: user.id,
-    };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  async register(user: NewUserDTO): Promise<UserDetails | any> {
+    const { name, email, password } = user;
+    const emailExist = await this.userService.findbyEmail(email);
+    if (emailExist) return 'Email taken!';
+
+    const hashedPassword = await this.hashPassword(password);
+
+    const newUser = await this.userService.createUser(
+      name,
+      hashedPassword,
+      email,
+    );
+
+    return this.userService._getUserDetails(newUser);
   }
 }
