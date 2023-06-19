@@ -1,10 +1,9 @@
-import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
-import { Item } from './item.schema';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { Document } from 'mongoose';
+import { Item } from './item.schema';
 import { User } from 'src/users/user.schema';
 
 export type OrderDocument = Order & Document;
-
 @Schema()
 export class Order {
   @Prop({ required: true })

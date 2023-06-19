@@ -1,7 +1,6 @@
 import { BadGatewayException, BadRequestException } from '@nestjs/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-
 export type ItemDocument = Item & Document;
 @Schema()
 export class Item {
@@ -11,7 +10,9 @@ export class Item {
   @Prop({
     default: 1,
     validate(value: number) {
-      if (value < 1) throw new BadRequestException();
+      if (value < 1) {
+        throw new BadGatewayException();
+      }
     },
   })
   quantity: number;
@@ -19,7 +20,9 @@ export class Item {
   @Prop({
     required: true,
     validate(value: number) {
-      if (value < 1) throw new BadGatewayException();
+      if (value < 1) {
+        throw new BadRequestException();
+      }
     },
   })
   price: number;

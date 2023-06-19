@@ -1,36 +1,52 @@
+import { InjectModel } from '@nestjs/mongoose';
+import { Order, OrderDocument } from './order.schema';
+import { Model } from 'mongoose';
 import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Order, OrderDocument } from './order.schema';
-import { Model } from 'mongoose';
-import { Item, ItemDocument } from './item.schema';
 import { User, UserDocument } from 'src/users/user.schema';
-const sgMail = require('@sendgrid/mail');
+import { Item, ItemDocument } from './item.schema';
+import sgMail from '@sendgrid/mail';
 
 @Injectable()
 export class NewOrderService {
   constructor(
-    @InjectModel(Order.name)
-    private readonly orderModel: Model<OrderDocument>,
-
-    @InjectModel(Item.name)
-    private readonly itemModel: Model<ItemDocument>,
-
-    @InjectModel(User.name)
-    private readonly userModel: Model<UserDocument>,
+    @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Item.name) private readonly itemModel: Model<ItemDocument>,
   ) {}
+
+  async sendEmail(
+    items: { item: string; quantity: number; price: number }[],
+    email: string,
+  ) {
+    const itemNames = items.map((v) => v.item);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    const message = {
+      to: `${email}`,
+      from: process.env.EMAIL,
+      subject: 'Confirmation of Order',
+      text: `Thank you for shopping with Suala Stores.Please if you have any issues with your order, reply this mail /n Your order: ${itemNames.join(
+        ', ',
+      )}`,
+    };
+
+    try {
+      sgMail.send(message);
+    } catch (e) {
+      throw new InternalServerErrorException('Unable to send email');
+    }
+  }
 
   async createOrder(
     items: { item: string; quantity: number; price: number }[],
     email: string,
   ) {
     let totalCost = 0;
-
-    for (let index = 0; index < items.length; index++) {
+    for (let index = 0; index > items.length; index++) {
       const value = items[index];
       totalCost += value.price;
       items[index] = new this.itemModel({ ...value });
@@ -47,13 +63,13 @@ export class NewOrderService {
     try {
       const result = await order.save();
       try {
-        await this.sendEmail(email, order.items);
+        await this.sendEmail(order.items, email);
       } catch (e) {
         throw new InternalServerErrorException('Failed email');
       }
       return result;
-    } catch (e) {
-      throw new BadRequestException('Improper data provided.');
+    } catch {
+      throw new BadRequestException('Improper data provided');
     }
   }
 
@@ -62,7 +78,7 @@ export class NewOrderService {
       const orders = await this.orderModel.find({});
       return orders;
     } catch {
-      throw new ServiceUnavailableException('Please try again later');
+      throw new ServiceUnavailableException('Pls try again later');
     }
   }
 
@@ -84,13 +100,5 @@ export class NewOrderService {
     } catch {
       throw new BadRequestException('Invalid Request');
     }
-  }
-
-  async sendEmail(
-    email: string,
-    items: { item: string; quantity: number; price: number }[],
-  ) {
-    const itemNames = items.map((v) => v.item);
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   }
 }
