@@ -7,13 +7,14 @@ import * as bcrypt from 'bcrypt';
 import { NewUserDTO } from 'src/users/dtos/new-user.dto';
 import { UserDetails } from 'src/users/user-details.interface';
 import { CurrentUserDTO } from 'src/users/dtos/existing-user.dto';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
     private readonly userService: NewUserService,
     private readonly jwtService: JwtService,
-    @InjectModel(User.name) private readonly userModel: Promise<UserDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
   async hashPassword(password: string): Promise<string> {
