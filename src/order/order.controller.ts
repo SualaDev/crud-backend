@@ -1,6 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { NewOrderService } from './order.service';
 import { OrderDocument } from './order.schema';
+import { JwtGuard } from 'src/auth/guards/jwt.guard';
 
 @Controller('orders')
 export class NewOrderController {
@@ -22,6 +31,7 @@ export class NewOrderController {
     return this.orderService.getAllOrders();
   }
 
+  @UseGuards(JwtGuard)
   @Get(':id')
   getOrderById(@Param('id') id: string): Promise<OrderDocument> {
     return this.orderService.getSingleOrder(id);
